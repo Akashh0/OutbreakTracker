@@ -1,0 +1,16 @@
+.app-container {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  overflow-x: hidden; /* prevent globe from overflowing horizontally */
+}
+
+.globe-wrapper {
+  width: 95%;
+  max-width: 2000px; /* match GlobeMap max width */
+  overflow: hidden;   /* ensure scene-container doesn't exceed this */
+}
