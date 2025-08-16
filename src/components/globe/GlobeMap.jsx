@@ -1,114 +1,129 @@
+// GlobeMap.jsx
 import React, { useRef, useEffect, useState } from "react";
 import Globe from "globe.gl";
 import * as d3 from "d3";
 import "./GlobeMap.css";
-import { geocodeLocation } from "../../components/geocoder"; // your geocoder.js
+import countries from "./countries.json"; // local country centroids (lat/lng)
+
+// 1 hex = N cases (lower = more detail, higher = less detail)
+const CASES_PER_UNIT = 50;
+const FRAME_DURATION = 500;
 
 export default function GlobeMap() {
-  const globeEl = useRef();
-  const globeInstance = useRef();
-  const [hoveredPoint, setHoveredPoint] = useState(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [dataFrames, setDataFrames] = useState([]);
+  const globeEl = useRef(null);
+  const globeInstance = useRef(null);
+
+  const [dataFrames, setDataFrames] = useState([]); // [{date, points:[{lat,lng,weight},...]}]
   const [currentFrame, setCurrentFrame] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const frameDuration = 500; // ms per frame
 
-  // Cache geocoded results to avoid repeated API calls
-  const geoCache = {};
-
+  // --- mount / init globe + data ------------------------------------------------
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchData() {
-      const data = await d3.csv("/data/owid-covid-data.csv");
-      const frames = {};
+      const raw = await d3.csv("/data/owid-covid-data.csv");
+      const framesMap = {}; // date -> array of case points
 
-      for (const row of data) {
+      for (const row of raw) {
         const date = row.date;
-        if (!frames[date]) frames[date] = [];
+        if (!date) continue;
 
-        if (row.new_cases && +row.new_cases > 0) {
-          let lat = row.latitude ? +row.latitude : null;
-          let lng = row.longitude ? +row.longitude : null;
+        if (!framesMap[date]) framesMap[date] = [];
 
-          // If no coordinates, use geocoder with cache
-          if (!lat || !lng) {
-            if (geoCache[row.location]) {
-              ({ lat, lng } = geoCache[row.location]);
-            } else {
-              const coords = await geocodeLocation(row.location);
-              if (coords) {
-                lat = coords.lat;
-                lng = coords.lng;
-                geoCache[row.location] = coords;
-              }
-            }
-          }
+        const newCases = +row.new_cases || 0;
+        if (newCases <= 0) continue;
 
-          if (lat && lng) {
-            frames[date].push({
-              lat,
-              lng,
-              country: row.location,
-              cases: +row.new_cases
-            });
-          }
+        // prefer row lat/lng if present; else fallback to countries.json
+        let lat = row.latitude ? +row.latitude : null;
+        let lng = row.longitude ? +row.longitude : null;
+
+        if ((!lat || !lng) && countries[row.location]) {
+          lat = countries[row.location].lat;
+          lng = countries[row.location].lng;
         }
+
+        if (lat == null || lng == null) continue;
+
+        // push one weighted point instead of thousands of dots
+        framesMap[date].push({
+          lat,
+          lng,
+          weight: newCases / CASES_PER_UNIT
+        });
       }
 
-      const sorted = Object.entries(frames)
+      const sorted = Object.entries(framesMap)
         .sort(([a], [b]) => new Date(a) - new Date(b))
-        .map(([date, locs]) => ({ date, locations: locs }));
+        .map(([date, points]) => ({ date, points }));
 
-      setDataFrames(sorted);
+      if (isMounted) setDataFrames(sorted);
     }
 
-    fetchData();
-
+    // init globe
     const globe = Globe()(globeEl.current)
       .globeImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-dark.jpg")
       .bumpImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png")
       .backgroundColor("rgba(0,0,0,0)")
-      .showGlobe(true)
-      .onPointHover(p => setHoveredPoint(p));
-
-    globeInstance.current = globe;
+      .showGlobe(true);
 
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 0.4;
 
+    globeInstance.current = globe;
+
+    // land polygons
     fetch("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson")
-      .then(res => res.json())
-      .then(countries => {
-        globe.polygonsData(countries.features)
+      .then((res) => res.json())
+      .then((geo) => {
+        globe.polygonsData(geo.features)
           .polygonCapColor(() => "rgba(255,255,255,0.05)")
           .polygonSideColor(() => "rgba(0,0,0,0.2)")
           .polygonStrokeColor(() => "#ffffff")
-          .polygonLabel(d => `<b>${d.properties.name}</b>`);
-      });
+          .polygonLabel((d) => `<b>${d.properties.name}</b>`);
+      })
+      .catch(() => { /* non-fatal */ });
 
-    window.addEventListener("mousemove", e => setMousePos({ x: e.clientX, y: e.clientY }));
+    // start data load
+    fetchData();
 
-    return () => {
-      window.removeEventListener("mousemove", () => {});
-      globeEl.current?.remove();
-    };
+    return () => { isMounted = false; };
   }, []);
 
+  // --- autoplay timer -----------------------------------------------------------
   useEffect(() => {
-    let interval;
-    if (playing && dataFrames.length) {
-      interval = setInterval(() => {
-        setCurrentFrame(f => Math.min(f + 1, dataFrames.length - 1));
-      }, frameDuration);
-    }
-    return () => clearInterval(interval);
+    if (!playing || dataFrames.length === 0) return undefined;
+
+    const id = setInterval(() => {
+      setCurrentFrame((f) => Math.min(f + 1, dataFrames.length - 1));
+    }, FRAME_DURATION);
+
+    return () => clearInterval(id);
   }, [playing, dataFrames]);
 
+  // --- render hexbin heatmap for the current frame (accumulate up to current) --
   useEffect(() => {
-    if (dataFrames[currentFrame] && globeInstance.current) {
-      globeInstance.current.pointsData(dataFrames[currentFrame].locations);
+    if (!globeInstance.current || dataFrames.length === 0) return;
+
+    // accumulate all points up to currentFrame
+    const merged = [];
+    for (let i = 0; i <= currentFrame; i++) {
+      merged.push(...dataFrames[i].points);
     }
+
+    globeInstance.current
+      .hexBinPointsData(merged)
+      .hexBinPointWeight("weight")
+      .hexAltitude(({ sumWeight }) => Math.log(sumWeight + 1) * 0.05) // scale height
+      .hexTopColor(() => "rgba(255,0,0,0.8)")
+      .hexSideColor(() => "rgba(200,0,0,0.5)")
+      .hexBinResolution(4);
   }, [currentFrame, dataFrames]);
+
+  // --- UI ----------------------------------------------------------------------
+  const canRewind = currentFrame > 0;
+  const canFwd = dataFrames.length > 0 && currentFrame < dataFrames.length - 1;
+  const currentDate = dataFrames[currentFrame]?.date || "--";
 
   return (
     <div className="globe-map-wrapper">
@@ -123,33 +138,24 @@ export default function GlobeMap() {
 
       <div className="controls">
         <button
-          onClick={() => setCurrentFrame(f => Math.max(f - 1, 0))}
-          disabled={currentFrame === 0}
+          onClick={() => setCurrentFrame((f) => Math.max(f - 1, 0))}
+          disabled={!canRewind}
         >
           ⏪
         </button>
-        <button onClick={() => setPlaying(p => !p)}>
+        <button onClick={() => setPlaying((p) => !p)}>
           {playing ? "⏸ Pause" : "▶ Play"}
         </button>
         <button
-          onClick={() => setCurrentFrame(f => Math.min(f + 1, dataFrames.length - 1))}
-          disabled={currentFrame === dataFrames.length - 1}
+          onClick={() =>
+            setCurrentFrame((f) => Math.min(f + 1, dataFrames.length - 1))
+          }
+          disabled={!canFwd}
         >
           ⏩
         </button>
-        <span className="date-label">
-          {dataFrames[currentFrame]?.date || "--"}
-        </span>
+        <span className="date-label">{currentDate}</span>
       </div>
-
-      {hoveredPoint && (
-        <div
-          className="tooltip"
-          style={{ left: mousePos.x + 15, top: mousePos.y + 15 }}
-        >
-          <strong>{hoveredPoint.country}</strong>: {hoveredPoint.cases} new cases
-        </div>
-      )}
     </div>
   );
 }
