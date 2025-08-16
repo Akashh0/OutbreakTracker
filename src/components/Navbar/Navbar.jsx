@@ -7,7 +7,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-left">
         <img src="https://www.freepnglogos.com/uploads/fox-png/image-fox-bouboum-wiki-0.png" alt="Logo" className="logo" />
-        <span className="website-name">MyWebsite</span>
+        <span className="website-name">PandemicView</span>
       </div>
       <div className="navbar-buttons">
         <button>Home</button>

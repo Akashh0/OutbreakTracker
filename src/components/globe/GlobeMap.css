@@ -2,85 +2,85 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* center vertically */
+  justify-content: flex-start;
   width: 100%;
-  min-height: 100vh; /* full viewport height */
-  box-sizing: border-box;
+  min-height: 100vh;
   background: transparent;
-  padding-top: 100px;  /* space for the text */
-  padding-bottom: 60px;
+  padding: 80px 0 40px;
+  box-sizing: border-box;
 }
 
 .globe-text-container {
   text-align: center;
-  margin-bottom: 20px;
-  max-width: 1200px;
+  margin-bottom: 10px;
   width: 90%;
+  max-width: 900px;
 }
 
 .globe-title {
-  font-size: 4.5rem;
-  font-weight: 800;
+  font-size: 3.5rem;
   color: #ffffff;
   margin: 0;
-  line-height: 1.1;
-  text-shadow: 2px 2px 10px rgba(0,0,0,0.7);
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
 }
 
 .globe-subtitle {
-  font-size: 1.8rem;
-  color: #eeeeee;
-  margin-top: 8px;
-  text-shadow: 1px 1px 6px rgba(0,0,0,0.5);
+  font-size: 1.3rem;
+  color: #ddd;
+  margin-top: 5px;
+  text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
 }
 
 .globe-map-container {
-  width: 95%;          /* almost full width */
+  width: 95%;
+  height: 80vh;
   max-width: 1900px;
-  height: 80vh;        /* use viewport height for centering */
   border-radius: 16px;
-  background-color: rgba(240, 248, 255, 0.0);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
   overflow: hidden;
   position: relative;
 }
 
+.controls {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.controls button {
+  padding: 8px 12px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #333;
+  color: #fff;
+}
+
+.controls button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.controls .date-label {
+  font-family: monospace;
+  color: #fff;
+}
 
 .tooltip {
   position: fixed;
-  background: rgba(0,0,0,0.85);
-  color: white;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 1rem;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.95rem;
   pointer-events: none;
-  box-shadow: 0 3px 12px rgba(255,0,0,0.5);
-  white-space: nowrap;
   z-index: 1000;
-  transition: transform 0.05s ease;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  .globe-title {
-    font-size: 3.5rem;
-  }
-  .globe-subtitle {
-    font-size: 1.5rem;
-  }
-  .globe-map-container {
-    height: 600px;
-  }
-}
-
-@media (max-width: 768px) {
-  .globe-title {
-    font-size: 2.8rem;
-  }
-  .globe-subtitle {
-    font-size: 1.2rem;
-  }
-  .globe-map-container {
-    height: 400px;
-  }
+/* Responsive tweaks */
+@media (max-width: 800px) {
+  .globe-title { font-size: 2.5rem; }
+  .globe-subtitle { font-size: 1.1rem; }
+  .globe-map-container { height: 60vh; }
 }
