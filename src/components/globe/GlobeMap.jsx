@@ -145,7 +145,7 @@ export default function GlobeMap() {
       .pointLng((d) => d.lng)
       .pointAltitude((d) => 0.05 + Math.log1p(d.value) * 0.002)
       .pointRadius((d) => d.size)
-      .pointColor(() => "rgba(255,80,0,0.85)")
+      .pointColor(() => "rgba(72, 136, 219, 0.85)")
       .pointResolution(12);
   }, [allPoints]);
 
