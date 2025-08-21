@@ -37,7 +37,7 @@ export default function GlobeMap() {
   const [playing, setPlaying] = useState(false);
   const [allPoints, setAllPoints] = useState([]); // ✅ accumulate points
 
-  // --- init globe + fetch data ----------------------------------------
+  // --- init globe + fetch data ---------------------------------------
   useEffect(() => {
     let isMounted = true;
 
