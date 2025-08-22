@@ -1,15 +1,9 @@
-// GlobeMap.jsx
 import React, { useRef, useEffect, useState } from "react";
 import Globe from "globe.gl";
 import * as d3 from "d3";
 import * as THREE from "three";
 import "./GlobeMap.css";
 import countries from "./countries.json";
-
-const CASES_PER_POINT = 10000; // 1 point = 10k cases
-const FRAME_DURATION = 500;    // ms per frame
-const POINT_SIZE = 1.2;        // base particle size
-const MIN_POINTS = 2;          // at least this many per country
 
 // 🔑 Normalize OWID names → countries.json keys
 const countryNameMap = {
@@ -30,146 +24,108 @@ const countryNameMap = {
 
 export default function GlobeMap() {
   const globeEl = useRef(null);
-  const globeInstance = useRef(null);
-
-  const [dataFrames, setDataFrames] = useState([]);
-  const [currentFrame, setCurrentFrame] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [allPoints, setAllPoints] = useState([]); // ✅ accumulate points
+  const [totals, setTotals] = useState({});
+  const [hoveredCountry, setHoveredCountry] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0, visible: false });
+  const globeRef = useRef(null);
 
   useEffect(() => {
-    let isMounted = true;
-
     async function fetchData() {
       const raw = await d3.csv("/data/owid-covid-data.csv");
-      const framesMap = {}; // {date: [{lat,lng,value,country}]}
 
+      // 🌍 aggregate *total* cases per country
+      const totals = {};
       for (const row of raw) {
-        const date = row.date;
-        if (!date) continue;
-        if (!framesMap[date]) framesMap[date] = [];
-
         const newCases = +row.new_cases || 0;
         if (newCases <= 0) continue;
 
-        // ✅ normalize name
         let key = row.location;
         if (countryNameMap[key]) key = countryNameMap[key];
 
         const coords = countries[key];
         if (!coords) continue;
 
-        framesMap[date].push({
-          lat: coords.lat,
-          lng: coords.lng,
-          value: newCases,
-          country: key
-        });
+        if (!totals[key]) {
+          totals[key] = { lat: coords.lat, lng: coords.lng, cases: 0 };
+        }
+        totals[key].cases += newCases;
       }
-
-      const sorted = Object.entries(framesMap)
-        .sort(([a], [b]) => new Date(a) - new Date(b))
-        .map(([date, points]) => ({ date, points }));
-
-      if (isMounted) setDataFrames(sorted);
+      setTotals(totals);
     }
 
+    // --- Globe Setup ---
     const globe = Globe()(globeEl.current)
-      .globeImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-dark.jpg")
-      .bumpImageUrl("https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png")
-      .backgroundColor("rgba(0,0,0,0)")
-      .showGlobe(true);
+      .globeImageUrl(
+        "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-dark.jpg"
+      )
+      .bumpImageUrl(
+        "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png"
+      )
+      .backgroundColor("rgba(0,0,0,0)");
 
     globe.controls().autoRotate = true;
     globe.controls().autoRotateSpeed = 0.4;
-    globeInstance.current = globe;
+    globeRef.current = globe;
 
-    fetch("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson")
-      .then((res) => res.json())
-      .then((geo) => {
+    // Country outlines
+    fetch(
+      "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson"
+    )
+      .then(res => res.json())
+      .then(geo => {
         globe
           .polygonsData(geo.features)
-          .polygonCapColor(() => "rgba(255,255,255,0.05)")
+          .polygonCapColor(d =>
+            d === hoveredCountry ? "rgba(255,165,0,0.8)" : "rgba(255,255,255,0.05)"
+          )
           .polygonSideColor(() => "rgba(0,0,0,0.15)")
           .polygonStrokeColor(() => "#ffffff")
-          .polygonLabel((d) => `<b>${d.properties.name}</b>`);
+          .onPolygonHover(d => {
+            setHoveredCountry(d || null);
+
+            if (d && totals[d.properties.name]) {
+              // project lat/lng to screen position
+              const { lat, lng } = totals[d.properties.name];
+              const coords = globe.getCoords(lat, lng);
+              const vec = new THREE.Vector3(...coords).project(
+                globe.camera()
+              );
+              const x = (vec.x * 0.5 + 0.5) * globe.renderer().domElement.clientWidth;
+              const y = (-vec.y * 0.5 + 0.5) * globe.renderer().domElement.clientHeight;
+
+              setTooltipPos({ x, y, visible: true });
+            } else {
+              setTooltipPos({ x: 0, y: 0, visible: false });
+            }
+          });
       });
 
     fetchData();
-    return () => { isMounted = false; };
   }, []);
-
-  // --- autoplay timer --------------------------------------------------
-  useEffect(() => {
-    if (!playing || dataFrames.length === 0) return;
-    const id = setInterval(() => {
-      setCurrentFrame((f) => (f < dataFrames.length - 1 ? f + 1 : f));
-    }, FRAME_DURATION);
-    return () => clearInterval(id);
-  }, [playing, dataFrames]);
-
-  // --- accumulate points instead of replacing --------------------------
-  useEffect(() => {
-    if (dataFrames.length === 0 || !globeInstance.current) return;
-
-    const frame = dataFrames[currentFrame];
-    if (!frame) return;
-
-    const newPoints = [];
-
-    frame.points.forEach((p) => {
-      const numPoints = Math.max(MIN_POINTS, Math.floor(p.value / CASES_PER_POINT));
-      for (let i = 0; i < numPoints; i++) {
-        newPoints.push({
-          lat: p.lat + (Math.random() - 0.5) * 0.5, // jitter
-          lng: p.lng + (Math.random() - 0.5) * 0.5,
-          size: POINT_SIZE,
-          value: p.value
-        });
-      }
-    });
-
-    // ✅ Add to existing points, don’t replace
-    setAllPoints((prev) => [...prev, ...newPoints]);
-  }, [currentFrame, dataFrames]);
-
-  // --- render all accumulated points -----------------------------------
-  useEffect(() => {
-    const globe = globeInstance.current;
-    if (!globe) return;
-
-    globe
-      .pointsData(allPoints)
-      .pointLat((d) => d.lat)
-      .pointLng((d) => d.lng)
-      .pointAltitude((d) => 0.05 + Math.log1p(d.value) * 0.002)
-      .pointRadius((d) => d.size)
-      .pointColor(() => "rgba(72, 136, 219, 0.85)")
-      .pointResolution(12);
-  }, [allPoints]);
-
-  // --- UI ---------------------------------------------------
-  const canRewind = currentFrame > 0;
-  const canFwd = dataFrames.length > 0 && currentFrame < dataFrames.length - 1;
-  const currentDate = dataFrames[currentFrame]?.date || "--";
 
   return (
     <div className="globe-map-wrapper">
       <div className="globe-text-container">
-        <h1 className="globe-title">Outbreak Timeline: COVID-19</h1>
-        <p className="globe-subtitle">
-          Now using floating scatter points — higher + more points = more cases.
-        </p>
+        <h1 className="globe-title">COVID-19 Outbreak Globe</h1>
+        <p className="globe-subtitle">Track the global spread of COVID-19 through this interactive 3D globe. Hover over any country to instantly view its current case count. A centralized dashboard provides total worldwide statistics for deeper insights. Simple, clear, and data-driven and designed to help you understand the pandemic at a glance.</p>
+        <br></br>
+        <p className="globe-subtitle">A geospatial visualization of COVID-19 cases across countries. Designed to present global outbreak data with clarity and precision.</p>
       </div>
-
       <div className="globe-map-container" ref={globeEl} />
-
-      <div className="controls">
-        <button onClick={() => setCurrentFrame((f) => Math.max(f - 1, 0))} disabled={!canRewind}>⏪</button>
-        <button onClick={() => setPlaying((p) => !p)}>{playing ? "⏸ Pause" : "▶ Play"}</button>
-        <button onClick={() => setCurrentFrame((f) => Math.min(f + 1, dataFrames.length - 1))} disabled={!canFwd}>⏩</button>
-        <span className="date-label">{currentDate}</span>
-      </div>
+      {hoveredCountry && tooltipPos.visible && (
+        <div
+          className="globe-tooltip"
+          style={{
+            left: tooltipPos.x + "px",
+            top: tooltipPos.y + "px",
+            position: "absolute"
+          }}
+        >
+          <b>{hoveredCountry.properties.name}</b>
+          <br />
+          Cases: {totals[hoveredCountry.properties.name]?.cases || "N/A"}
+        </div>
+      )}
     </div>
   );
 }

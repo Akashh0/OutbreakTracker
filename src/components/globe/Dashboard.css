@@ -1,0 +1,36 @@
+.dashboard {
+  padding: 20px;
+  background: transparent;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.country-selector {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.country-selector select {
+  padding: 6px;
+  font-size: 14px;
+}
+
+.charts-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.chart-box {
+  flex: 1 1 30%;
+  background: transparent;
+  margin: 10px;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+}
