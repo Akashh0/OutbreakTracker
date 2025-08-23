@@ -4,30 +4,62 @@ import { Line, Pie, Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import "./Dashboard.css";
 
+// 🔑 Same name mapping as GlobeMap
+const countryNameMap = {
+  "United States": "United States of America",
+  "South Korea": "Korea, Republic of",
+  "North Korea": "Korea, Democratic People's Republic of",
+  "Democratic Republic of Congo": "Congo, The Democratic Republic of the",
+  "Republic of Congo": "Congo",
+  "Czechia": "Czech Republic",
+  "Myanmar": "Burma",
+  "Eswatini": "Swaziland",
+  "Cabo Verde": "Cape Verde",
+  "North Macedonia": "Macedonia, The Former Yugoslav Republic of",
+  "Syria": "Syrian Arab Republic",
+  "Taiwan": "Taiwan, Province of China",
+  "Laos": "Lao People's Democratic Republic"
+};
+
 export default function Dashboard() {
   const [covidData, setCovidData] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState("India");
 
   useEffect(() => {
-    // Load CSV file
-    Papa.parse("/owid-covid-data.csv", {
+    Papa.parse("/data/owid-covid-data.csv", {
       download: true,
       header: true,
       dynamicTyping: true,
       complete: (results) => {
-        setCovidData(results.data);
+        // Normalize names immediately
+        const normalized = results.data
+          .filter((row) => row.location && row.date) // drop bad rows
+          .map((row) => {
+            let loc = row.location;
+            if (countryNameMap[loc]) {
+              loc = countryNameMap[loc];
+            }
+            return { ...row, location: loc };
+          });
+        setCovidData(normalized);
       },
     });
   }, []);
 
   if (covidData.length === 0) return <p>Loading Dashboard...</p>;
 
-  // Filter data for selected country
+  // ✅ Filter data for selected country
   const countryData = covidData.filter(
     (row) => row.location === selectedCountry
   );
 
-  // Line chart (cases trend)
+  // ✅ Get latest snapshot of that country
+  const latestCountryData = countryData[countryData.length - 1] || {};
+  const totalCases = latestCountryData.total_cases || 0;
+  const totalDeaths = latestCountryData.total_deaths || 0;
+  const totalSurvivors = Math.max(totalCases - totalDeaths, 0);
+
+  // ✅ Line chart (cases trend)
   const lineData = {
     labels: countryData.map((row) => row.date),
     datasets: [
@@ -40,22 +72,27 @@ export default function Dashboard() {
     ],
   };
 
-  // Pie chart (deaths vs survivors)
-  const latest = countryData[countryData.length - 1] || {};
+  // ✅ Pie chart (deaths vs survivors)
   const pieData = {
     labels: ["Deaths", "Survivors"],
     datasets: [
       {
-        data: [latest.total_deaths || 0, (latest.total_cases || 0) - (latest.total_deaths || 0)],
+        data: [totalDeaths, totalSurvivors],
         backgroundColor: ["red", "green"],
       },
     ],
   };
 
-  // Bar chart (Top 10 countries by total cases)
-  const latestDate = covidData[covidData.length - 1].date;
+  // ✅ Bar chart (Top 10 countries by total cases on latest date globally)
+  const latestDate = covidData.reduce(
+    (max, row) => (row.date > max ? row.date : max),
+    "2020-01-01"
+  );
+
   const latestSnapshot = covidData.filter((row) => row.date === latestDate);
+
   const topCountries = latestSnapshot
+    .filter((row) => row.total_cases) // remove empty
     .sort((a, b) => (b.total_cases || 0) - (a.total_cases || 0))
     .slice(0, 10);
 
@@ -100,7 +137,7 @@ export default function Dashboard() {
         </div>
 
         <div className="chart-box">
-          <h3>Top 10 Countries by Cases</h3>
+          <h3>Top 10 Countries by Cases ({latestDate})</h3>
           <Bar data={barData} />
         </div>
       </div>
