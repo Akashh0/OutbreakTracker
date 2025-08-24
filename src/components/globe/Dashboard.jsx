@@ -45,7 +45,14 @@ export default function Dashboard() {
     });
   }, []);
 
-  if (covidData.length === 0) return <p>Loading Dashboard...</p>;
+  if (covidData.length === 0)
+  return (
+    <div className="loading-screen">
+      <div className="spinner"></div>
+      <h2 className="loading-text">Loading Dashboard...</h2>
+      <p className="loading-sub">Fetching the latest COVID-19 data</p>
+    </div>
+  );
 
   // ✅ Filter data for selected country
   const countryData = covidData.filter(

@@ -60,6 +60,26 @@
   z-index: 1000;
 }
 
+.dashboard-btn {
+  margin-top: 20px;
+  padding: 12px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #00c6ff, #0072ff);
+  color: white;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  transition: all 0.3s ease;
+}
+
+.dashboard-btn:hover {
+  background: linear-gradient(135deg, #0072ff, #00c6ff);
+  transform: scale(1.05);
+}
+
+
 /* Responsive tweaks */
 @media (max-width: 800px) {
   .globe-title { font-size: 2.5rem; }

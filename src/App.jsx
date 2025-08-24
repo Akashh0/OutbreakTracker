@@ -1,4 +1,5 @@
 import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Background from "./components/Background";
 import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
@@ -7,15 +8,27 @@ import Dashboard from "./components/globe/Dashboard";
 
 function App() {
   return (
-    <div className="app-container">
-      <Background />
-      <Navbar />
-      {/* Wrap the globe in a fixed-width container */}
-      <div className="globe-wrapper">
-        <GlobeMap />
+    <Router>
+      <div className="app-container">
+        <Background />
+        <Navbar />
+
+        <Routes>
+          {/* Main page with globe */}
+          <Route
+            path="/"
+            element={
+              <div className="globe-wrapper">
+                <GlobeMap />
+              </div>
+            }
+          />
+
+          {/* Dashboard route */}
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
       </div>
-      <Dashboard />
-    </div>
+    </Router>
   );
 }
 

@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import Globe from "globe.gl";
 import * as d3 from "d3";
 import * as THREE from "three";
+import { useNavigate } from "react-router-dom";   // 🔹 import navigate hook
 import "./GlobeMap.css";
 import countries from "./countries.json";
 
@@ -28,6 +29,7 @@ export default function GlobeMap() {
   const [hoveredCountry, setHoveredCountry] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0, visible: false });
   const globeRef = useRef(null);
+  const navigate = useNavigate();   // 🔹 navigation hook
 
   useEffect(() => {
     async function fetchData() {
@@ -107,11 +109,27 @@ export default function GlobeMap() {
     <div className="globe-map-wrapper">
       <div className="globe-text-container">
         <h1 className="globe-title">COVID-19 Outbreak Globe</h1>
-        <p className="globe-subtitle">Track the global spread of COVID-19 through this interactive 3D globe. Hover over any country to instantly view its current case count. A centralized dashboard provides total worldwide statistics for deeper insights. Simple, clear, and data-driven and designed to help you understand the pandemic at a glance.</p>
-        <br></br>
-        <p className="globe-subtitle">A geospatial visualization of COVID-19 cases across countries. Designed to present global outbreak data with clarity and precision.</p>
+        <p className="globe-subtitle">
+          Track the global spread of COVID-19 through this interactive 3D globe. Hover
+          over any country to instantly view its current case count. A centralized
+          dashboard provides total worldwide statistics for deeper insights. Simple,
+          clear, and data-driven and designed to help you understand the pandemic at a
+          glance.
+        </p>
+        <br />
+        <p className="globe-subtitle">
+          A geospatial visualization of COVID-19 cases across countries. Designed to
+          present global outbreak data with clarity and precision.
+        </p>
+
+        {/* 🚀 Button to navigate */}
+        <button className="dashboard-btn" onClick={() => navigate("/dashboard")}>
+          Show Statistics
+        </button>
       </div>
+
       <div className="globe-map-container" ref={globeEl} />
+
       {hoveredCountry && tooltipPos.visible && (
         <div
           className="globe-tooltip"
