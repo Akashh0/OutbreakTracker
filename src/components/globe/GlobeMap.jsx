@@ -56,7 +56,7 @@ export default function GlobeMap() {
     // --- Globe Setup ---
     const globe = Globe()(globeEl.current)
       .globeImageUrl(
-        "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-dark.jpg"
+        "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
       )
       .bumpImageUrl(
         "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png"
@@ -79,7 +79,7 @@ export default function GlobeMap() {
             d === hoveredCountry ? "rgba(255,165,0,0.8)" : "rgba(255,255,255,0.05)"
           )
           .polygonSideColor(() => "rgba(0,0,0,0.15)")
-          .polygonStrokeColor(() => "#ffffff")
+          .polygonStrokeColor(() => "#00000057")
           .onPolygonHover(d => {
             setHoveredCountry(d || null);
 
