@@ -22,15 +22,18 @@
 
 .charts-container {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around;
+  flex-direction: column; /* stack vertically */
+  align-items: center;   /* keep centered */
+  width: 100%;           /* make container full width */
 }
 
 .chart-box {
-  flex: 1 1 30%;
+  width: 100%; /* expand almost full width */
+  max-width: 1800px; /* keep it neat on very large screens */
   background: transparent;
-  margin: 10px;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+  margin: 20px 0; /* spacing between charts */
+  padding: 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0px 2px 8px rgba(0,0,0,0.3);
 }

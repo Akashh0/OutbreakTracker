@@ -72,15 +72,6 @@ export default function Dashboard() {
   };
 
   // ✅ Pie chart (deaths vs survivors)
-  const pieData = {
-    labels: ["Deaths", "Survivors"],
-    datasets: [
-      {
-        data: [totalDeaths, totalSurvivors],
-        backgroundColor: ["red", "green"],
-      },
-    ],
-  };
 
   // ✅ Bar chart (Top 10 countries by total cases on 2025-08-02)
   const fixedDate = "2024-08-02";
@@ -97,7 +88,7 @@ export default function Dashboard() {
       {
         label: "Total Cases",
         data: topCountries.map((row) => row.total_cases || 0),
-        backgroundColor: "orange",
+        backgroundColor: "white",
       },
     ],
   };
@@ -124,11 +115,6 @@ export default function Dashboard() {
         <div className="chart-box">
           <h3>Cases Trend ({selectedCountry})</h3>
           <Line data={lineData} />
-        </div>
-
-        <div className="chart-box">
-          <h3>Deaths vs Survivors</h3>
-          <Pie data={pieData} />
         </div>
 
         <div className="chart-box">
