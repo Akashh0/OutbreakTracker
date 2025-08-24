@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Papa from "papaparse";
-import { Line, Pie, Bar } from "react-chartjs-2";
+import { Line, Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import "./Dashboard.css";
 
@@ -52,12 +52,6 @@ export default function Dashboard() {
     (row) => row.location === selectedCountry
   );
 
-  // ✅ Get latest snapshot of that country
-  const latestCountryData = countryData[countryData.length - 1] || {};
-  const totalCases = latestCountryData.total_cases || 0;
-  const totalDeaths = latestCountryData.total_deaths || 0;
-  const totalSurvivors = Math.max(totalCases - totalDeaths, 0);
-
   // ✅ Line chart (cases trend)
   const lineData = {
     labels: countryData.map((row) => row.date),
@@ -71,7 +65,18 @@ export default function Dashboard() {
     ],
   };
 
-  // ✅ Pie chart (deaths vs survivors)
+  // ✅ NEW: Deaths trend line chart
+  const deathsLineData = {
+    labels: countryData.map((row) => row.date),
+    datasets: [
+      {
+        label: "Total Deaths",
+        data: countryData.map((row) => row.total_deaths || 0),
+        borderColor: "red",
+        fill: false,
+      },
+    ],
+  };
 
   // ✅ Bar chart (Top 10 countries by total cases on 2025-08-02)
   const fixedDate = "2024-08-02";
@@ -115,6 +120,11 @@ export default function Dashboard() {
         <div className="chart-box">
           <h3>Cases Trend ({selectedCountry})</h3>
           <Line data={lineData} />
+        </div>
+
+        <div className="chart-box">
+          <h3>Deaths Trend ({selectedCountry})</h3>
+          <Line data={deathsLineData} />
         </div>
 
         <div className="chart-box">
