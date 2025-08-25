@@ -80,7 +80,7 @@
 }
 
 
-/* Responsive tweaks */
+
 @media (max-width: 800px) {
   .globe-title { font-size: 2.5rem; }
   .globe-subtitle { font-size: 1.1rem; }
